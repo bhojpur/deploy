@@ -1,0 +1,74 @@
+before:
+  hooks:
+    - go mod tidy
+dist: release
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}-{{ .Tag }}-source'
+checksum:
+  name_template: '{{ .ProjectName }}-{{ .Tag }}-checksums.txt'
+builds:
+  - id: depiam
+    env:
+    - CGO_ENABLED=0
+    main: identity.go
+    binary: depiam
+    ldflags:
+      - -s -w
+      - -X github.com/bhojpur/deploy/pkg/version.Version={{.Version}}-{{.ShortCommit}}
+      - -X "github.com/bhojpur/deploy/pkg/version.BuildTime={{ time "2006-01-02 15:04:05 MST" }}"
+      - -X "github.com/bhojpur/deploy/pkg/version.BuildCommit={{ .FullCommit }}"
+  - id: depcfg
+    env:
+      - CGO_ENABLED=0
+    main: configure.go
+    binary: depcfg
+    ldflags:
+      - -s -w
+      - -X github.com/bhojpur/deploy/pkg/version.Version={{.Version}}-{{.ShortCommit}}
+      - -X "github.com/bhojpur/deploy/pkg/version.BuildTime={{ time "2006-01-02 15:04:05 MST" }}"
+      - -X "github.com/bhojpur/deploy/pkg/version.BuildCommit={{ .FullCommit }}"
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - 386
+archives:
+  - id: depiam
+    files:
+    - "none*"
+    format: binary # this removes the tar of the archives, leaving the binaries alone
+    name_template: depiam-{{ .Tag }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
+    builds:
+    - depiam
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      386: i386
+      amd64: x86_64
+  - id: depcfg
+    files:
+    - "none*"
+    format: binary # this removes the tar of the archives, leaving the binaries alone
+    name_template: depcfg-{{ .Tag }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
+    builds:
+    - depcfg
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      386: i386
+      amd64: x86_64
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^Merge pull request'
+release:
+  prerelease: auto
+  header: |
+    Bhojpur Deploy applies a configuration to the system described with yaml files. It uses a
+    simple, yet powerful distro-agnostic cloud-init style format for the definition.
